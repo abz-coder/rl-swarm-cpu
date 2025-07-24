@@ -138,7 +138,6 @@ if [ "$CONNECT_TO_TESTNET" = true ]; then
         sed -i "3s/.*/SMART_CONTRACT_ADDRESS=$SWARM_CONTRACT/" "$ENV_FILE"
     fi
 
-
     # Docker image already builds it, no need to again.
     if [ -z "$DOCKER" ]; then
         yarn install --immutable
@@ -224,28 +223,18 @@ echo_green ">> Getting requirements..."
 pip install --upgrade pip
 
 # echo_green ">> Installing GenRL..."
-pip install git+https://github.com/abz-coder/genrl.git
+pip install git+https://github.com/abz-coder/genrl-cpu.git
 pip install reasoning-gym>=0.1.20 # for reasoning gym env
 pip install trl # for grpo config, will be deprecated soon
 pip install hivemind@git+https://github.com/gensyn-ai/hivemind@639c964a8019de63135a2594663b5bec8e5356dd # We need the latest, 1.1.11 is broken
 
 
+# Copy default config if needed
 if [ ! -d "$ROOT/configs" ]; then
     mkdir "$ROOT/configs"
-fi  
-if [ -f "$ROOT/configs/rg-swarm.yaml" ]; then
-    # Use cmp -s for a silent comparison. If different, backup and copy.
-    if ! cmp -s "$ROOT/rgym_exp/config/rg-swarm.yaml" "$ROOT/configs/rg-swarm.yaml"; then
-        if [ -z "$GENSYN_RESET_CONFIG" ]; then
-            echo_green ">> Found differences in rg-swarm.yaml. If you would like to reset to the default, set GENSYN_RESET_CONFIG to a non-empty value."
-        else
-            echo_green ">> Found differences in rg-swarm.yaml. Backing up existing config."
-            mv "$ROOT/configs/rg-swarm.yaml" "$ROOT/configs/rg-swarm.yaml.bak"
-            cp "$ROOT/rgym_exp/config/rg-swarm.yaml" "$ROOT/configs/rg-swarm.yaml"
-        fi
-    fi
-else
-    # If the config doesn't exist, just copy it.
+fi
+
+if [ ! -f "$ROOT/configs/rg-swarm.yaml" ]; then
     cp "$ROOT/rgym_exp/config/rg-swarm.yaml" "$ROOT/configs/rg-swarm.yaml"
 fi
 
@@ -277,14 +266,6 @@ if [ -n "$MODEL_NAME" ]; then
 else
     echo_green ">> Using default model from config"
 fi
-
-USE_CPU=${USE_CPU:-""}
-
-if [[ "$USE_CPU" =~ ^(CPU|cpu|true|1)$ ]]; then
-    echo_green ">> USE_CPU=$USE_CPU detected. Adjusting config for CPU mode..."
-    sed -i -E 's/fp16: false/fp16: true/; s/num_train_samples: 2/num_train_samples: 1/' "$ROOT/rgym_exp/config/rg-swarm.yaml"
-fi
-
 
 echo_green ">> Good luck in the swarm!"
 echo_blue ">> And remember to star the repo on GitHub! --> https://github.com/gensyn-ai/rl-swarm"
