@@ -161,18 +161,46 @@ if [ "$CONNECT_TO_TESTNET" = true ]; then
         fi
 
         echo_green ">> Starting localtunnel for port 3000..."
-        lt --port 3000 &
+        
+        # Create a temporary log file for tunnel output
+        TUNNEL_LOG=$(mktemp)
+        
+        # Start localtunnel and capture output with timeout
+        echo ">> Getting tunnel URL..."
+        timeout 15 lt --port 3000 > "$TUNNEL_LOG" 2>&1 &
+        LT_TEMP_PID=$!
+        
+        # Wait for tunnel to establish and get URL
+        sleep 10
+        
+        # Extract and display the tunnel URL
+        if [ -f "$TUNNEL_LOG" ]; then
+            TUNNEL_URL=$(grep -oE 'https://[a-z0-9-]+\.loca\.lt' "$TUNNEL_LOG" | head -1)
+            if [ -n "$TUNNEL_URL" ]; then
+                echo_green "🔗 Tunnel URL: $TUNNEL_URL"
+                echo_green "📋 Use this URL to access the website!"
+            else
+                echo "⚠️  Could not extract tunnel URL. Tunnel log contents:"
+                cat "$TUNNEL_LOG"
+            fi
+        fi
+        
+        # Kill the temporary process
+        kill $LT_TEMP_PID 2>/dev/null || true
+        
+        # Now start localtunnel in background for continuous operation
+        lt --port 3000 >> "$ROOT/logs/tunnel.log" 2>&1 &
         LT_PID=$!
+        
+        # Clean up temp log
+        rm -f "$TUNNEL_LOG"
 
         # Выводим IP сервера
         SERVER_IP=$(hostname -I | awk '{print $1}')
-        echo "Server IP: $SERVER_IP"
+        echo "🖥️  Server IP (use as password if prompted): $SERVER_IP"
 
-        # Wait a bit to ensure tunnel is up
-        sleep 3
-
-        echo "Your tunnel is running! Use the link printed above to visit the website."
-        echo "If prompted for a password, use your VPS IP."
+        echo "Your tunnel is running! Use the URL printed above to visit the website."
+        echo "If prompted for a password, use your VPS IP: $SERVER_IP"
     else
         echo_green ">> User data found. Skipping localtunnel."
         
@@ -274,4 +302,4 @@ python -m rgym_exp.runner.swarm_launcher \
     --config-path "$ROOT/rgym_exp/config" \
     --config-name "rg-swarm.yaml" 
 
-wait  # Keep script running until Ctrl+C
+wait  # Keep script running until Ctrl+C 
