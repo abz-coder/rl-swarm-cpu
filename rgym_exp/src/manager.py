@@ -217,7 +217,9 @@ class SwarmGameManager(BaseGameManager, DefaultGameManagerMixin):
 
     def _hook_after_rewards_updated(self):
         signal_by_agent = self._get_total_rewards_by_agent()
-        self.batched_signals += self._get_my_rewards(signal_by_agent)
+        my_current_reward = self._get_my_rewards(signal_by_agent)
+        self.batched_signals += my_current_reward
+        get_logger().info(f"🎯 Current rewards for peer: {self.batched_signals:.2f} (added: {my_current_reward:.2f})")
         self._try_submit_to_chain(signal_by_agent)
 
     def _hook_after_round_advanced(self):
