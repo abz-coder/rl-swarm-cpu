@@ -7,7 +7,7 @@ training:
   num_generations: 2
   num_transplant_trees: 2
   seed: 42
-  fp16: true
+  fp16: false # set this line to true if your hardware supports fp16
 
 blockchain:
   alchemy_url: "https://gensyn-testnet.g.alchemy.com/public"
@@ -17,7 +17,10 @@ blockchain:
   modal_proxy_url: "http://localhost:3000/api/"
 
 communications:
-  initial_peers: []
+  initial_peers:
+    - '/ip4/38.101.215.12/tcp/30011/p2p/QmQ2gEXoPJg6iMBSUFWGzAabS2VhnzuS782Y637hGjfsRJ'
+    - '/ip4/38.101.215.13/tcp/30012/p2p/QmWhiaLrx3HRZfgXc2i7KW5nMUNK7P9tRc71yFJdGEZKkC'
+    - '/ip4/38.101.215.14/tcp/30013/p2p/QmQa1SCfYTxx7RvU7qJJRo79Zm1RAwPpkeLueDVJuBBmFp'
 
 eval:
   judge_base_url: https://swarm-judge-102957787771.us-east1.run.app
@@ -67,7 +70,7 @@ game_manager:
   data_manager:
     _target_: rgym_exp.src.data.ReasoningGymDataManager
     yaml_config_path: "rgym_exp/src/datasets.yaml"
-    num_train_samples: 1
+    num_train_samples: 2
     num_evaluation_samples: 0
     num_generations: ${training.num_generations}
     system_prompt_id: 'default'
