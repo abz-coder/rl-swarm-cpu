@@ -78,18 +78,6 @@ class SwarmGameManager(BaseGameManager, DefaultGameManagerMixin):
         _LOG = get_logger()
         _LOG.addHandler(file_handler)
 
-        # Debug Logger Setup - для подробных signal_by_agent логов
-        self.debug_logger = logging.getLogger(f"debug_{self.animal_name}")
-        self.debug_logger.setLevel(logging.INFO)
-        debug_formatter = logging.Formatter(format_msg)
-        debug_file_handler = logging.FileHandler(
-            os.path.join(log_dir, f"debug_signals_{self.animal_name}.log")
-        )
-        debug_file_handler.setFormatter(debug_formatter)
-        self.debug_logger.addHandler(debug_file_handler)
-        # Не передаем логи в root logger
-        self.debug_logger.propagate = False
-
         # Сохраняем coordinator для работы с блокчейном
         self.coordinator = coordinator
         
@@ -204,36 +192,25 @@ class SwarmGameManager(BaseGameManager, DefaultGameManagerMixin):
 
     def _try_submit_to_chain(self, signal_by_agent):
         elapsed_time_hours = (time.time() - self.time_since_submit) / 3600
-        self.debug_logger.info(f"📊 [DEBUG] signal_by_agent received: {dict(signal_by_agent) if signal_by_agent else 'Empty'}")
-        self.debug_logger.info(f"📈 [DEBUG] signal_by_agent length: {len(signal_by_agent)}")
-        if len(signal_by_agent) > 0:
-            self.debug_logger.info(f"🔍 [DEBUG] signal_by_agent details: {[(agent_id, f'{signal:.2f}') for agent_id, signal in signal_by_agent.items()]}")
-        get_logger().info(f"🕐 Checking submit timing: elapsed_time_hours={elapsed_time_hours:.2f}, submit_period={self.submit_period}")
         if elapsed_time_hours > self.submit_period:
-            get_logger().info(f"⏰ Time to submit! Starting submission process for round {self.state.round}")
             try:
-                get_logger().info(f"💰 Submitting reward: round={self.state.round}, reward={int(self.batched_signals)}, peer_id={self.peer_id}")
                 self.coordinator.submit_reward(
                     self.state.round, 0, int(self.batched_signals), self.peer_id
                 )
-                get_logger().info(f"✅ Successfully submitted reward {int(self.batched_signals)} for round {self.state.round}")
                 self.batched_signals = 0.0
-                
                 if len(signal_by_agent) > 0:
+                    get_logger().info(f"🔄 Found {len(signal_by_agent)} agents in signal_by_agent, selecting max")
                     max_agent, max_signal = max(signal_by_agent.items(), key=lambda x: x[1])
-                    get_logger().info(f"🏆 Found max agent from signals: {max_agent} with signal {max_signal:.2f}")
-                    get_logger().info(f"📊 All signal_by_agent: {dict(signal_by_agent)}")
+                    get_logger().info(f"🏆 Selected max agent: {max_agent} with signal {max_signal:.2f}")
                 else: # if we have no signal_by_agents, just submit ourselves.
+                    get_logger().info(f"🤷 No signal_by_agent data available, submitting ourselves as winner")
                     max_agent = self.peer_id
-                    get_logger().info(f"🤷 No signal_by_agent data, submitting ourselves as winner: {max_agent}")
+                    get_logger().info(f"🆔 Selected self as winner: {max_agent}")
 
-                get_logger().info(f"🏅 Submitting winners: round={self.state.round}, winners=[{max_agent}], submitter_peer_id={self.peer_id}")
+                get_logger().info(f"🏅 About to submit winners - round: {self.state.round}, winners: [{max_agent}], submitter: {self.peer_id}")
                 self.coordinator.submit_winners(self.state.round, [max_agent], self.peer_id)
-                get_logger().info(f"✅ Successfully submitted winner {max_agent} for round {self.state.round}")
-                
                 self.time_since_submit = time.time()
                 self.submitted_this_round = True
-                get_logger().info(f"🔄 Reset submission timer and set submitted_this_round=True")
             except Exception as e:
                 get_logger().exception(
                     "Failed to submit to chain.\n"
