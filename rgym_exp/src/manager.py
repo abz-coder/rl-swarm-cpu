@@ -3,7 +3,6 @@ import os
 import sys
 import time
 from collections import defaultdict
-from pathlib import Path
 
 from genrl.blockchain import SwarmCoordinator
 from genrl.communication import Communication
@@ -199,15 +198,10 @@ class SwarmGameManager(BaseGameManager, DefaultGameManagerMixin):
                 )
                 self.batched_signals = 0.0
                 if len(signal_by_agent) > 0:
-                    get_logger().info(f"🔄 Found {len(signal_by_agent)} agents in signal_by_agent, selecting max")
                     max_agent, max_signal = max(signal_by_agent.items(), key=lambda x: x[1])
-                    get_logger().info(f"🏆 Selected max agent: {max_agent} with signal {max_signal:.2f}")
                 else: # if we have no signal_by_agents, just submit ourselves.
-                    get_logger().info(f"🤷 No signal_by_agent data available, submitting ourselves as winner")
                     max_agent = self.peer_id
-                    get_logger().info(f"🆔 Selected self as winner: {max_agent}")
 
-                get_logger().info(f"🏅 About to submit winners - round: {self.state.round}, winners: [{max_agent}], submitter: {self.peer_id}")
                 self.coordinator.submit_winners(self.state.round, [max_agent], self.peer_id)
                 self.time_since_submit = time.time()
                 self.submitted_this_round = True
